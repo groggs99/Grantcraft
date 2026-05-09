@@ -1,5 +1,6 @@
 import OrgProfileForm from '@/components/org/OrgProfileForm'
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import type { OrgProfileFormData } from '@/types/org'
 
 async function saveOrgProfile(data: OrgProfileFormData) {
@@ -10,7 +11,7 @@ async function saveOrgProfile(data: OrgProfileFormData) {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) throw new Error('You must be signed in to save a profile.')
 
-  const { error } = await supabase.from('organisations').insert({
+  const { data: inserted, error } = await supabase.from('organisations').insert({
     user_id: user.id,
     name: data.name,
     legal_name: data.legalName,
@@ -42,9 +43,11 @@ async function saveOrgProfile(data: OrgProfileFormData) {
     previous_grants_detail: data.previousGrantsDetail,
     largest_grant_received: data.largestGrantReceived,
     grant_writing_capacity: data.grantWritingCapacity,
-  })
+  }).select('id').single()
 
   if (error) throw new Error(error.message)
+
+  redirect(`/org/${inserted!.id}/ideas/new`)
 }
 
 export const metadata = {
