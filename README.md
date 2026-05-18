@@ -1,33 +1,29 @@
 # GrantCraft
 
-GrantCraft helps Irish community and voluntary organisations find relevant grants and draft stronger funding applications. It guides organisations through a four-stage journey from profiling to funded impact.
+GrantCraft helps Irish community and voluntary organisations find relevant grants and write stronger funding applications. The product is built for the volunteer secretary, the part-time community development worker, the GAA club treasurer — people who are short on time, unfamiliar with grant-writing conventions, and currently lose hours navigating funder portals. The interface aims to feel calm, trustworthy, and written in plain English.
 
-## The Four Stages
+## The four-stage journey
 
 | Stage | Name | What it does |
 |-------|------|--------------|
-| 1 | Organisation Profile | Build a rich profile used across all other stages |
-| 2 | Idea Development | Turn a plain-language project idea into a structured grant brief |
-| 3 | Grant Matching | Surface relevant grants from the 96-grant Irish database |
-| 4 | Application Generation | Draft and export grant applications section by section |
+| 1 | Organisation Profile | Build a rich profile used as context for every later stage |
+| 2 | Idea Development | Shape a funding need into a structured project brief |
+| 3 | Grant Matching | Surface relevant grants from a curated Irish funding database |
+| 4 | Application Generation | Draft a tailored application section by section |
 
 Stage 1 is the foundation — every downstream feature depends on profile completeness.
 
 ## Stack
 
-- **Framework**: Next.js 16 (App Router, Server Components)
-- **Styling**: Tailwind CSS v4
-- **Database / Auth**: Supabase (Postgres + Row-Level Security + Auth)
-- **Language**: TypeScript strict mode
+- Next.js 16 (App Router, Server Components by default)
+- Tailwind CSS v4
+- Supabase (Postgres + Auth + Row-Level Security) via `@supabase/ssr`
+- TypeScript, strict mode, no `any`
+- Deployed on Vercel
 
-## Getting Started
+## Getting started
 
-### Prerequisites
-
-- Node.js (see `package.json` for version)
-- A Supabase project with the migrations in `supabase/migrations/` applied
-
-### Setup
+Prerequisites: Node.js (version pinned in `package.json`) and a Supabase project with the migrations below applied.
 
 ```bash
 npm install
@@ -37,9 +33,9 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Database migrations
+## Database migrations
 
-Apply migrations in order against your Supabase project:
+Apply in order against your Supabase project:
 
 ```
 supabase/migrations/001_create_organisations.sql
@@ -51,13 +47,28 @@ supabase/migrations/003_add_beta_profile_fields.sql
 
 | File | Purpose |
 |------|---------|
-| `ireland_grants_database_v3.xlsx` | Canonical 96-grant database used for Stage 2 matching |
-| `grantcraft_tam_analysis.xlsx` | Total addressable market analysis |
+| `ireland_grants_database_v3.xlsx` | 96-grant Irish funding database used by Stage 3 matching |
+| `grantcraft_tam_analysis.xlsx` | Total addressable market and SAM analysis |
 | `grantcraft-platform-brief.md` | Product brief and platform overview |
+
+## Working in this repo
+
+GrantCraft is built collaboratively with three AI tools playing distinct, non-overlapping roles:
+
+- **Claude (in chat)** — architect. Holds the roadmap and writes a spec for every chunk before any code is written. Specs live in `docs/specs/`.
+- **Claude Code** — primary builder. Implements one chunk per branch, working from the spec.
+- **Codex** — reviewer. Reviews each PR against the spec and the conventions in `AGENTS.md`. Never the primary author for the same surface Claude Code wrote, and vice versa.
+
+Each unit of work is a single chunk on a single branch with a single focused PR. Session progress is logged in `BUILD_LOG.md`; the chunk backlog lives in `ROADMAP.md`. Read `AGENTS.md` and `CLAUDE.md` before starting any work — they document stack conventions, the calm-UI requirement, and Irish-specific rules that the agents must follow.
 
 ## Conventions
 
-- All copy uses Irish English (organisation, colour, programme, recognise)
-- Counties refer to the 26 counties of the Republic of Ireland
-- Monetary amounts use the euro (€) symbol
-- Charity registration is with the Charities Regulator; company numbers reference the CRO
+- All UI copy uses Irish English (organisation, programme, centre, recognise).
+- County data refers to the 26 counties of the Republic of Ireland.
+- Monetary amounts use the euro (€) symbol and Irish formatting (e.g. €5,000).
+- Charity registration refers to the Charities Regulator; company numbers to the CRO.
+- Org types align to common Irish legal structures: CLG, CIC, unincorporated voluntary, registered charity.
+
+## Status
+
+Pre-beta. The beta onboarding flow is in active development for co-designer testing with Irish community organisations. The full Stage 1 form, Supabase auth, and Stages 2–4 are upcoming.
