@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GrantCraft
+
+GrantCraft helps Irish community and voluntary organisations find relevant grants and draft stronger funding applications. It guides organisations through a four-stage journey from profiling to funded impact.
+
+## The Four Stages
+
+| Stage | Name | What it does |
+|-------|------|--------------|
+| 1 | Organisation Profile | Build a rich profile used across all other stages |
+| 2 | Grant Matching | Surface relevant grants from the 96-grant Irish database |
+| 3 | Application Builder | Draft and export grant applications section by section |
+| 4 | Impact Reporting | Track outcomes and generate funder-ready impact reports |
+
+Stage 1 is the foundation — every downstream feature depends on profile completeness.
+
+## Stack
+
+- **Framework**: Next.js 16 (App Router, Server Components)
+- **Styling**: Tailwind CSS v4
+- **Database / Auth**: Supabase (Postgres + Row-Level Security + Auth)
+- **Language**: TypeScript strict mode
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js (see `package.json` for version)
+- A Supabase project with the migrations in `supabase/migrations/` applied
+
+### Setup
 
 ```bash
+npm install
+cp .env.local.example .env.local   # add your Supabase URL and anon key
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Database migrations
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Apply migrations in order against your Supabase project:
 
-## Learn More
+```
+supabase/migrations/001_create_organisations.sql
+supabase/migrations/002_create_project_ideas.sql
+supabase/migrations/003_add_beta_profile_fields.sql
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Reference data
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| File | Purpose |
+|------|---------|
+| `ireland_grants_database_v3.xlsx` | Canonical 96-grant database used for Stage 2 matching |
+| `grantcraft_tam_analysis.xlsx` | Total addressable market analysis |
+| `grantcraft-platform-brief.md` | Product brief and platform overview |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Conventions
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- All copy uses Irish English (organisation, colour, programme, recognise)
+- Counties refer to the 26 counties of the Republic of Ireland
+- Monetary amounts use the euro (€) symbol
+- Charity registration is with the Charities Regulator; company numbers reference the CRO

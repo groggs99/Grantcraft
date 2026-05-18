@@ -1,92 +1,111 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Building2,
-  MapPin,
-  Mail,
-  Users,
-  Target,
-  FileText,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
+  FileText,
+  Target,
 } from 'lucide-react'
-import type { OrgProfileFormData, ProfileSection, ActivityArea, Demographic } from '@/types/org'
+import type { ActivityArea, Demographic, OrgProfileFormData, ProfileSection } from '@/types/org'
 import {
-  ORG_TYPES,
-  COUNTIES,
   ACTIVITY_AREAS,
+  COUNTIES,
+  DEFAULT_FORM_DATA,
   DEMOGRAPHICS,
-  BUDGET_RANGES,
-  GEO_REACH_LABELS,
-  ORG_SETTINGS,
+  FUNDING_CATEGORIES,
   GRANT_WRITING_CAPACITY,
+  ORG_TYPES,
   PROFILE_SECTIONS,
   SECTION_ORDER,
-  DEFAULT_FORM_DATA,
 } from '@/lib/constants'
 
+type FieldErrors = Partial<Record<keyof OrgProfileFormData, string>>
+
 const SECTION_ICONS = {
-  identity: Building2,
-  location: MapPin,
-  contact: Mail,
-  capacity: Users,
-  activities: Target,
-  'grant-experience': FileText,
+  basics: Building2,
+  community: Target,
+  funding: FileText,
+  review: CheckCircle2,
 }
 
-const REQUIRED_FIELDS: (keyof OrgProfileFormData)[] = [
-  'name',
-  'description',
-  'mission',
-  'addressLine1',
-  'town',
-  'contactName',
-  'contactRole',
-  'contactEmail',
-]
-
-function calculateCompleteness(data: OrgProfileFormData): number {
-  const textFilled = REQUIRED_FIELDS.filter((f) => {
-    const v = data[f]
-    return typeof v === 'string' ? v.trim().length > 0 : Boolean(v)
-  }).length
-  const hasActivities = data.activityAreas.length > 0 ? 1 : 0
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.contactEmail) ? 1 : 0
-  const total = REQUIRED_FIELDS.length + 2
-  return Math.round(((textFilled - (data.contactEmail.trim() ? 1 : 0) + emailValid + hasActivities) / total) * 100)
+const REQUIRED_BY_SECTION: Record<ProfileSection, (keyof OrgProfileFormData)[]> = {
+  basics: ['name', 'town', 'county', 'orgType'],
+  community: ['description', 'activityAreas', 'targetDemographics'],
+  funding: [
+    'projectFundingNeed',
+    'estimatedFundingAmount',
+    'fundingCategory',
+    'grantWritingCapacity',
+    'biggestGrantChallenge',
+  ],
+  review: [],
 }
 
-// --- Completeness ring ---
-
-const RING_R = 26
-const RING_C = 2 * Math.PI * RING_R
-
-function CompletenessRing({ pct }: { pct: number }) {
-  const offset = RING_C * (1 - pct / 100)
+function Label({
+  htmlFor,
+  children,
+  required,
+}: {
+  htmlFor: string
+  children: React.ReactNode
+  required?: boolean
+}) {
   return (
-    <div className="relative flex items-center justify-center">
-      <svg width="72" height="72" className="-rotate-90" aria-hidden>
-        <circle cx="36" cy="36" r={RING_R} fill="none" stroke="#e7e5e4" strokeWidth="6" />
-        <circle
-          cx="36"
-          cy="36"
-          r={RING_R}
-          fill="none"
-          stroke="#10b981"
-          strokeWidth="6"
-          strokeLinecap="round"
-          strokeDasharray={RING_C}
-          strokeDashoffset={offset}
-          className="transition-all duration-500"
-        />
-      </svg>
-      <span className="absolute text-sm font-semibold text-stone-800">{pct}%</span>
-    </div>
+    <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-stone-800">
+      {children}
+      {required && <span className="ml-1 text-red-500">*</span>}
+    </label>
   )
 }
 
-// --- Tag toggle ---
+function Hint({ children }: { children: React.ReactNode }) {
+  return <p className="mt-1 text-xs leading-5 text-stone-500">{children}</p>
+}
+
+function ErrorText({ id, message }: { id: string; message?: string }) {
+  if (!message) return null
+  return (
+    <p id={id} className="mt-1 text-sm text-red-600">
+      {message}
+    </p>
+  )
+}
+
+function StepHeader({ activeSection }: { activeSection: ProfileSection }) {
+  return (
+    <ol className="grid gap-2 sm:grid-cols-4" aria-label="Organisation profile steps">
+      {PROFILE_SECTIONS.map((section, index) => {
+        const Icon = SECTION_ICONS[section.id]
+        const activeIndex = SECTION_ORDER.indexOf(activeSection)
+        const currentIndex = SECTION_ORDER.indexOf(section.id)
+        const isActive = section.id === activeSection
+        const isComplete = currentIndex < activeIndex
+
+        return (
+          <li
+            key={section.id}
+            className={`rounded-lg border px-3 py-3 ${
+              isActive
+                ? 'border-emerald-500 bg-emerald-50 text-emerald-900'
+                : isComplete
+                  ? 'border-emerald-200 bg-white text-stone-700'
+                  : 'border-stone-200 bg-white text-stone-500'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Icon className={`h-4 w-4 ${isActive || isComplete ? 'text-emerald-600' : 'text-stone-400'}`} />
+              <span className="text-xs font-semibold uppercase tracking-wide">Step {index + 1}</span>
+            </div>
+            <p className="mt-1 text-sm font-semibold">{section.label}</p>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
 
 function TagToggle({
   label,
@@ -101,103 +120,122 @@ function TagToggle({
     <button
       type="button"
       onClick={onToggle}
-      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+      className={`rounded-full border px-3 py-2 text-sm font-medium transition-colors ${
         selected
-          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-          : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:bg-stone-50'
+          ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+          : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300 hover:bg-stone-50'
       }`}
+      aria-pressed={selected}
     >
       {label}
     </button>
   )
 }
 
-// --- Field helpers ---
-
-function Label({ htmlFor, children, required }: { htmlFor: string; children: React.ReactNode; required?: boolean }) {
+function SummaryItem({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-stone-700">
-      {children}
-      {required && <span className="ml-1 text-red-500">*</span>}
-    </label>
-  )
-}
-
-function FieldGroup({ children }: { children: React.ReactNode }) {
-  return <div className="space-y-4">{children}</div>
-}
-
-function Hint({ children }: { children: React.ReactNode }) {
-  return <p className="mt-1 text-xs text-stone-500">{children}</p>
-}
-
-function RadioGroup<T extends string>({
-  name,
-  options,
-  value,
-  onChange,
-}: {
-  name: string
-  options: Record<T, string>
-  value: T
-  onChange: (v: T) => void
-}) {
-  return (
-    <div className="flex flex-wrap gap-3">
-      {(Object.entries(options) as [T, string][]).map(([k, label]) => (
-        <label
-          key={k}
-          className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
-            value === k
-              ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-              : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
-          }`}
-        >
-          <input
-            type="radio"
-            name={name}
-            value={k}
-            checked={value === k}
-            onChange={() => onChange(k)}
-            className="sr-only"
-          />
-          {label}
-        </label>
-      ))}
+    <div className="border-b border-stone-100 py-3 last:border-b-0">
+      <dt className="text-xs font-semibold uppercase tracking-wide text-stone-500">{label}</dt>
+      <dd className="mt-1 text-sm leading-6 text-stone-900">{value || 'Not provided'}</dd>
     </div>
   )
 }
 
-// --- Section components ---
+function asEuroAmount(value: string) {
+  const numeric = value.replace(/[^\d]/g, '')
+  if (!numeric) return value
+  return `€${Number(numeric).toLocaleString('en-IE')}`
+}
 
-function IdentitySection({
+function fieldIsEmpty(data: OrgProfileFormData, field: keyof OrgProfileFormData) {
+  const value = data[field]
+  if (Array.isArray(value)) return value.length === 0
+  if (typeof value === 'string') return value.trim().length === 0
+  return value === undefined || value === null
+}
+
+function validateSections(data: OrgProfileFormData, sections: ProfileSection[]) {
+  const errors: FieldErrors = {}
+
+  sections.flatMap((section) => REQUIRED_BY_SECTION[section]).forEach((field) => {
+    if (fieldIsEmpty(data, field)) {
+      errors[field] = 'Please fill this in before continuing.'
+    }
+  })
+
+  if (data.estimatedFundingAmount.trim()) {
+    const amount = Number(data.estimatedFundingAmount.replace(/[^\d.]/g, ''))
+    if (!Number.isFinite(amount) || amount <= 0) {
+      errors.estimatedFundingAmount = 'Enter an approximate amount, for example 5000.'
+    }
+  }
+
+  return errors
+}
+
+function deriveBudgetRange(amountValue: string): OrgProfileFormData['budgetRange'] {
+  const amount = Number(amountValue.replace(/[^\d.]/g, ''))
+  if (!Number.isFinite(amount)) return '10k-50k'
+  if (amount < 10000) return 'under-10k'
+  if (amount < 50000) return '10k-50k'
+  if (amount < 100000) return '50k-100k'
+  if (amount < 250000) return '100k-250k'
+  if (amount < 500000) return '250k-500k'
+  if (amount < 1000000) return '500k-1m'
+  return 'over-1m'
+}
+
+function BasicsStep({
   data,
+  errors,
   onChange,
 }: {
   data: OrgProfileFormData
+  errors: FieldErrors
   onChange: (patch: Partial<OrgProfileFormData>) => void
 }) {
   return (
-    <FieldGroup>
+    <div className="space-y-5">
       <div>
         <Label htmlFor="name" required>Organisation name</Label>
         <input
           id="name"
           className="form-input"
           value={data.name}
-          onChange={(e) => onChange({ name: e.target.value })}
-          placeholder="e.g. Tidy Towns Ballymoore CLG"
+          onChange={(event) => onChange({ name: event.target.value })}
+          aria-describedby="name-error"
+          placeholder="e.g. Ballymore Community Centre"
         />
+        <ErrorText id="name-error" message={errors.name} />
       </div>
 
-      <div>
-        <Label htmlFor="legalName">Legal name (if different)</Label>
-        <input
-          id="legalName"
-          className="form-input"
-          value={data.legalName ?? ''}
-          onChange={(e) => onChange({ legalName: e.target.value })}
-        />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="county" required>County</Label>
+          <select
+            id="county"
+            className="form-input"
+            value={data.county}
+            onChange={(event) => onChange({ county: event.target.value as OrgProfileFormData['county'] })}
+          >
+            {(Object.entries(COUNTIES) as [OrgProfileFormData['county'], string][]).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <Label htmlFor="town" required>Local area or town</Label>
+          <input
+            id="town"
+            className="form-input"
+            value={data.town}
+            onChange={(event) => onChange({ town: event.target.value, addressLine1: event.target.value })}
+            aria-describedby="town-error"
+            placeholder="e.g. Ballymore, Westport"
+          />
+          <ErrorText id="town-error" message={errors.town} />
+        </div>
       </div>
 
       <div>
@@ -206,435 +244,229 @@ function IdentitySection({
           id="orgType"
           className="form-input"
           value={data.orgType}
-          onChange={(e) => onChange({ orgType: e.target.value as OrgProfileFormData['orgType'] })}
+          onChange={(event) => onChange({ orgType: event.target.value as OrgProfileFormData['orgType'] })}
         >
-          {(Object.entries(ORG_TYPES) as [OrgProfileFormData['orgType'], string][]).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
+          {(Object.entries(ORG_TYPES) as [OrgProfileFormData['orgType'], string][]).map(([value, label]) => (
+            <option key={value} value={value}>{label}</option>
           ))}
         </select>
+        <Hint>Choose the closest fit. It is fine to choose Other if you are unsure.</Hint>
       </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div>
-          <Label htmlFor="charityNumber">Charity number</Label>
-          <input
-            id="charityNumber"
-            className="form-input"
-            value={data.charityNumber ?? ''}
-            onChange={(e) => onChange({ charityNumber: e.target.value })}
-            placeholder="20XXXXXX"
-          />
-        </div>
-        <div>
-          <Label htmlFor="companyNumber">CRO number</Label>
-          <input
-            id="companyNumber"
-            className="form-input"
-            value={data.companyNumber ?? ''}
-            onChange={(e) => onChange({ companyNumber: e.target.value })}
-            placeholder="XXXXXXXX"
-          />
-        </div>
-        <div>
-          <Label htmlFor="taxExemptionRef">Tax exemption ref</Label>
-          <input
-            id="taxExemptionRef"
-            className="form-input"
-            value={data.taxExemptionRef ?? ''}
-            onChange={(e) => onChange({ taxExemptionRef: e.target.value })}
-            placeholder="CHY XXXXX"
-          />
-        </div>
-      </div>
-
-      <div>
-        <Label htmlFor="yearFounded" required>Year founded</Label>
-        <input
-          id="yearFounded"
-          type="number"
-          className="form-input w-32"
-          min={1800}
-          max={new Date().getFullYear()}
-          value={data.yearFounded}
-          onChange={(e) => onChange({ yearFounded: Number(e.target.value) })}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="description" required>Organisation description</Label>
-        <textarea
-          id="description"
-          rows={3}
-          className="form-input"
-          value={data.description}
-          onChange={(e) => onChange({ description: e.target.value })}
-          placeholder="Briefly describe what your organisation does and who it serves."
-        />
-        <Hint>{data.description.length} / 500 characters</Hint>
-      </div>
-
-      <div>
-        <Label htmlFor="mission" required>Mission statement</Label>
-        <textarea
-          id="mission"
-          rows={2}
-          className="form-input"
-          value={data.mission}
-          onChange={(e) => onChange({ mission: e.target.value })}
-          placeholder="Our mission is to…"
-        />
-      </div>
-    </FieldGroup>
+    </div>
   )
 }
 
-function LocationSection({
+function CommunityStep({
   data,
+  errors,
   onChange,
 }: {
   data: OrgProfileFormData
+  errors: FieldErrors
   onChange: (patch: Partial<OrgProfileFormData>) => void
 }) {
-  return (
-    <FieldGroup>
-      <div>
-        <Label htmlFor="addressLine1" required>Address line 1</Label>
-        <input
-          id="addressLine1"
-          className="form-input"
-          value={data.addressLine1}
-          onChange={(e) => onChange({ addressLine1: e.target.value })}
-          placeholder="Street address or PO Box"
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="addressLine2">Address line 2</Label>
-        <input
-          id="addressLine2"
-          className="form-input"
-          value={data.addressLine2 ?? ''}
-          onChange={(e) => onChange({ addressLine2: e.target.value })}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="sm:col-span-2">
-          <Label htmlFor="town" required>Town / City</Label>
-          <input
-            id="town"
-            className="form-input"
-            value={data.town}
-            onChange={(e) => onChange({ town: e.target.value })}
-          />
-        </div>
-        <div>
-          <Label htmlFor="eircode">Eircode</Label>
-          <input
-            id="eircode"
-            className="form-input"
-            value={data.eircode ?? ''}
-            onChange={(e) => onChange({ eircode: e.target.value.toUpperCase() })}
-            placeholder="X00 XX00"
-          />
-        </div>
-      </div>
-
-      <div>
-        <Label htmlFor="county" required>County</Label>
-        <select
-          id="county"
-          className="form-input"
-          value={data.county}
-          onChange={(e) => onChange({ county: e.target.value as OrgProfileFormData['county'] })}
-        >
-          {(Object.entries(COUNTIES) as [OrgProfileFormData['county'], string][]).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <Label htmlFor="setting">Area setting</Label>
-        <RadioGroup
-          name="setting"
-          options={ORG_SETTINGS}
-          value={data.setting}
-          onChange={(v) => onChange({ setting: v })}
-        />
-      </div>
-    </FieldGroup>
-  )
-}
-
-function ContactSection({
-  data,
-  onChange,
-}: {
-  data: OrgProfileFormData
-  onChange: (patch: Partial<OrgProfileFormData>) => void
-}) {
-  return (
-    <FieldGroup>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <Label htmlFor="contactName" required>Contact name</Label>
-          <input
-            id="contactName"
-            className="form-input"
-            value={data.contactName}
-            onChange={(e) => onChange({ contactName: e.target.value })}
-          />
-        </div>
-        <div>
-          <Label htmlFor="contactRole" required>Job title / role</Label>
-          <input
-            id="contactRole"
-            className="form-input"
-            value={data.contactRole}
-            onChange={(e) => onChange({ contactRole: e.target.value })}
-            placeholder="e.g. Chairperson, Coordinator"
-          />
-        </div>
-      </div>
-
-      <div>
-        <Label htmlFor="contactEmail" required>Email address</Label>
-        <input
-          id="contactEmail"
-          type="email"
-          className="form-input"
-          value={data.contactEmail}
-          onChange={(e) => onChange({ contactEmail: e.target.value })}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="contactPhone">Phone number</Label>
-        <input
-          id="contactPhone"
-          type="tel"
-          className="form-input"
-          value={data.contactPhone ?? ''}
-          onChange={(e) => onChange({ contactPhone: e.target.value })}
-          placeholder="+353 1 XXX XXXX"
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="website">Website</Label>
-        <input
-          id="website"
-          type="url"
-          className="form-input"
-          value={data.website ?? ''}
-          onChange={(e) => onChange({ website: e.target.value })}
-          placeholder="https://www.example.ie"
-        />
-      </div>
-    </FieldGroup>
-  )
-}
-
-function CapacitySection({
-  data,
-  onChange,
-}: {
-  data: OrgProfileFormData
-  onChange: (patch: Partial<OrgProfileFormData>) => void
-}) {
-  return (
-    <FieldGroup>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <Label htmlFor="staffCount">Paid staff (full-time equivalent)</Label>
-          <input
-            id="staffCount"
-            type="number"
-            min={0}
-            className="form-input"
-            value={data.staffCount}
-            onChange={(e) => onChange({ staffCount: Number(e.target.value) })}
-          />
-        </div>
-        <div>
-          <Label htmlFor="volunteerCount">Active volunteers</Label>
-          <input
-            id="volunteerCount"
-            type="number"
-            min={0}
-            className="form-input"
-            value={data.volunteerCount}
-            onChange={(e) => onChange({ volunteerCount: Number(e.target.value) })}
-          />
-        </div>
-      </div>
-
-      <div>
-        <Label htmlFor="budgetRange" required>Annual turnover / budget</Label>
-        <select
-          id="budgetRange"
-          className="form-input"
-          value={data.budgetRange}
-          onChange={(e) => onChange({ budgetRange: e.target.value as OrgProfileFormData['budgetRange'] })}
-        >
-          {(Object.entries(BUDGET_RANGES) as [OrgProfileFormData['budgetRange'], string][]).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </select>
-        <Hint>This helps match you with appropriately sized grant programmes.</Hint>
-      </div>
-    </FieldGroup>
-  )
-}
-
-function ActivitiesSection({
-  data,
-  onChange,
-}: {
-  data: OrgProfileFormData
-  onChange: (patch: Partial<OrgProfileFormData>) => void
-}) {
-  function toggleActivity(area: ActivityArea) {
-    const next = data.activityAreas.includes(area)
-      ? data.activityAreas.filter((a) => a !== area)
-      : [...data.activityAreas, area]
-    onChange({ activityAreas: next })
+  function setMainActivity(area: ActivityArea) {
+    onChange({ activityAreas: [area] })
   }
 
-  function toggleDemographic(d: Demographic) {
-    const next = data.targetDemographics.includes(d)
-      ? data.targetDemographics.filter((x) => x !== d)
-      : [...data.targetDemographics, d]
+  function toggleDemographic(demographic: Demographic) {
+    const next = data.targetDemographics.includes(demographic)
+      ? data.targetDemographics.filter((item) => item !== demographic)
+      : [...data.targetDemographics, demographic]
     onChange({ targetDemographics: next })
   }
 
   return (
-    <FieldGroup>
+    <div className="space-y-6">
       <div>
-        <Label htmlFor="geographicReach">Geographic reach</Label>
-        <RadioGroup
-          name="geographicReach"
-          options={GEO_REACH_LABELS}
-          value={data.geographicReach}
-          onChange={(v) => onChange({ geographicReach: v })}
+        <Label htmlFor="activityAreas" required>Main activity area</Label>
+        <div id="activityAreas" className="flex flex-wrap gap-2">
+          {(Object.entries(ACTIVITY_AREAS) as [ActivityArea, string][]).map(([value, label]) => (
+            <TagToggle
+              key={value}
+              label={label}
+              selected={data.activityAreas[0] === value}
+              onToggle={() => setMainActivity(value)}
+            />
+          ))}
+        </div>
+        <ErrorText id="activityAreas-error" message={errors.activityAreas} />
+      </div>
+
+      <div>
+        <Label htmlFor="description" required>Short organisation description</Label>
+        <textarea
+          id="description"
+          className="form-input"
+          rows={4}
+          value={data.description}
+          onChange={(event) => onChange({ description: event.target.value, mission: event.target.value })}
+          aria-describedby="description-hint description-error"
+          placeholder="Tell us what your organisation does in a few sentences."
         />
+        <Hint>
+          <span id="description-hint">This will later help GrantCraft draft organisation background answers.</span>
+        </Hint>
+        <ErrorText id="description-error" message={errors.description} />
       </div>
 
       <div>
-        <p className="mb-2 text-sm font-medium text-stone-700">
-          Activity areas <span className="ml-1 text-red-500">*</span>
-        </p>
-        <p className="mb-3 text-xs text-stone-500">Select all that apply. These determine which grants you will be matched to.</p>
-        <div className="flex flex-wrap gap-2">
-          {(Object.entries(ACTIVITY_AREAS) as [ActivityArea, string][]).map(([k, v]) => (
+        <Label htmlFor="targetDemographics" required>Beneficiaries or audience served</Label>
+        <div id="targetDemographics" className="flex flex-wrap gap-2">
+          {(Object.entries(DEMOGRAPHICS) as [Demographic, string][]).map(([value, label]) => (
             <TagToggle
-              key={k}
-              label={v}
-              selected={data.activityAreas.includes(k)}
-              onToggle={() => toggleActivity(k)}
+              key={value}
+              label={label}
+              selected={data.targetDemographics.includes(value)}
+              onToggle={() => toggleDemographic(value)}
             />
           ))}
         </div>
-        {data.activityAreas.length > 0 && (
-          <p className="mt-2 text-xs text-emerald-600">{data.activityAreas.length} selected</p>
-        )}
+        <Hint>Select the groups you most often support.</Hint>
+        <ErrorText id="targetDemographics-error" message={errors.targetDemographics} />
       </div>
-
-      <div>
-        <p className="mb-2 text-sm font-medium text-stone-700">Target demographics</p>
-        <div className="flex flex-wrap gap-2">
-          {(Object.entries(DEMOGRAPHICS) as [Demographic, string][]).map(([k, v]) => (
-            <TagToggle
-              key={k}
-              label={v}
-              selected={data.targetDemographics.includes(k)}
-              onToggle={() => toggleDemographic(k)}
-            />
-          ))}
-        </div>
-        {data.targetDemographics.length > 0 && (
-          <p className="mt-2 text-xs text-emerald-600">{data.targetDemographics.length} selected</p>
-        )}
-      </div>
-    </FieldGroup>
+    </div>
   )
 }
 
-function GrantExperienceSection({
+function FundingStep({
   data,
+  errors,
   onChange,
 }: {
   data: OrgProfileFormData
+  errors: FieldErrors
   onChange: (patch: Partial<OrgProfileFormData>) => void
 }) {
+  function updateEstimatedAmount(value: string) {
+    onChange({
+      estimatedFundingAmount: value,
+      budgetRange: deriveBudgetRange(value),
+    })
+  }
+
   return (
-    <FieldGroup>
+    <div className="space-y-5">
       <div>
-        <p className="mb-2 text-sm font-medium text-stone-700">Has your organisation received grant funding before?</p>
-        <div className="flex gap-3">
-          {(['yes', 'no'] as const).map((v) => {
-            const active = (v === 'yes') === data.hasGrantExperience
-            return (
-              <button
-                key={v}
-                type="button"
-                onClick={() => onChange({ hasGrantExperience: v === 'yes' })}
-                className={`rounded-lg border px-5 py-2 text-sm font-medium transition-colors ${
-                  active
-                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                    : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
-                }`}
-              >
-                {v === 'yes' ? 'Yes' : 'No'}
-              </button>
-            )
-          })}
+        <Label htmlFor="projectFundingNeed" required>Project or funding need</Label>
+        <textarea
+          id="projectFundingNeed"
+          className="form-input"
+          rows={4}
+          value={data.projectFundingNeed}
+          onChange={(event) => onChange({ projectFundingNeed: event.target.value })}
+          aria-describedby="projectFundingNeed-error"
+          placeholder="What do you need funding for right now?"
+        />
+        <ErrorText id="projectFundingNeed-error" message={errors.projectFundingNeed} />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="estimatedFundingAmount" required>Estimated funding amount</Label>
+          <input
+            id="estimatedFundingAmount"
+            className="form-input"
+            inputMode="numeric"
+            value={data.estimatedFundingAmount}
+            onChange={(event) => updateEstimatedAmount(event.target.value)}
+            aria-describedby="estimatedFundingAmount-hint estimatedFundingAmount-error"
+            placeholder="e.g. 15000"
+          />
+          <Hint>
+            <span id="estimatedFundingAmount-hint">An estimate is enough for beta testing.</span>
+          </Hint>
+          <ErrorText id="estimatedFundingAmount-error" message={errors.estimatedFundingAmount} />
+        </div>
+
+        <div>
+          <Label htmlFor="fundingCategory" required>Funding category</Label>
+          <select
+            id="fundingCategory"
+            className="form-input"
+            value={data.fundingCategory}
+            onChange={(event) => onChange({ fundingCategory: event.target.value as OrgProfileFormData['fundingCategory'] })}
+          >
+            {(Object.entries(FUNDING_CATEGORIES) as [OrgProfileFormData['fundingCategory'], string][]).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {data.hasGrantExperience && (
-        <>
-          <div>
-            <Label htmlFor="previousGrantsDetail">Tell us about previous grants received</Label>
-            <textarea
-              id="previousGrantsDetail"
-              rows={4}
-              className="form-input"
-              value={data.previousGrantsDetail ?? ''}
-              onChange={(e) => onChange({ previousGrantsDetail: e.target.value })}
-              placeholder="Include funder names, programme titles, and approximate amounts if known."
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="largestGrantReceived">Largest single grant received</Label>
-            <input
-              id="largestGrantReceived"
-              className="form-input"
-              value={data.largestGrantReceived ?? ''}
-              onChange={(e) => onChange({ largestGrantReceived: e.target.value })}
-              placeholder="e.g. €25,000 from the Community Foundation"
-            />
-          </div>
-        </>
-      )}
+      <fieldset>
+        <legend className="mb-2 block text-sm font-medium text-stone-800">Previous grant experience</legend>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {(Object.entries(GRANT_WRITING_CAPACITY) as [OrgProfileFormData['grantWritingCapacity'], string][]).map(([value, label]) => (
+            <label
+              key={value}
+              className={`cursor-pointer rounded-lg border px-3 py-3 text-sm font-medium transition-colors ${
+                data.grantWritingCapacity === value
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+                  : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
+              }`}
+            >
+              <input
+                type="radio"
+                name="grantWritingCapacity"
+                value={value}
+                checked={data.grantWritingCapacity === value}
+                onChange={() => onChange({
+                  grantWritingCapacity: value,
+                  hasGrantExperience: value !== 'none',
+                })}
+                className="sr-only"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       <div>
-        <Label htmlFor="grantWritingCapacity">Grant writing experience</Label>
-        <RadioGroup
-          name="grantWritingCapacity"
-          options={GRANT_WRITING_CAPACITY}
-          value={data.grantWritingCapacity}
-          onChange={(v) => onChange({ grantWritingCapacity: v })}
+        <Label htmlFor="biggestGrantChallenge" required>Biggest challenge with grants</Label>
+        <textarea
+          id="biggestGrantChallenge"
+          className="form-input"
+          rows={3}
+          value={data.biggestGrantChallenge}
+          onChange={(event) => onChange({ biggestGrantChallenge: event.target.value })}
+          aria-describedby="biggestGrantChallenge-error"
+          placeholder="e.g. finding suitable grants, knowing what to write, time to complete forms"
         />
-        <Hint>This helps us suggest the right level of support for your applications.</Hint>
+        <ErrorText id="biggestGrantChallenge-error" message={errors.biggestGrantChallenge} />
       </div>
-    </FieldGroup>
+    </div>
   )
 }
 
-// --- Main form ---
+function ReviewStep({ data }: { data: OrgProfileFormData }) {
+  const mainActivity = data.activityAreas[0] ? ACTIVITY_AREAS[data.activityAreas[0]] : ''
+  const audience = data.targetDemographics.map((item) => DEMOGRAPHICS[item]).join(', ')
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-950">
+        Check these details before saving. You can come back and update the profile later.
+      </div>
+
+      <dl className="rounded-lg border border-stone-200 bg-white px-4">
+        <SummaryItem label="Organisation name" value={data.name} />
+        <SummaryItem label="County" value={COUNTIES[data.county]} />
+        <SummaryItem label="Local area or town" value={data.town} />
+        <SummaryItem label="Organisation type" value={ORG_TYPES[data.orgType]} />
+        <SummaryItem label="Main activity area" value={mainActivity} />
+        <SummaryItem label="Organisation description" value={data.description} />
+        <SummaryItem label="Beneficiaries or audience" value={audience} />
+        <SummaryItem label="Project or funding need" value={data.projectFundingNeed} />
+        <SummaryItem label="Estimated funding amount" value={asEuroAmount(data.estimatedFundingAmount)} />
+        <SummaryItem label="Funding category" value={FUNDING_CATEGORIES[data.fundingCategory]} />
+        <SummaryItem label="Previous grant experience" value={GRANT_WRITING_CAPACITY[data.grantWritingCapacity]} />
+        <SummaryItem label="Biggest grant challenge" value={data.biggestGrantChallenge} />
+      </dl>
+    </div>
+  )
+}
 
 interface OrgProfileFormProps {
   initialData?: Partial<OrgProfileFormData>
@@ -646,171 +478,143 @@ export default function OrgProfileForm({ initialData, onSave }: OrgProfileFormPr
     ...DEFAULT_FORM_DATA,
     ...initialData,
   })
-  const [activeSection, setActiveSection] = useState<ProfileSection>('identity')
+  const [activeSection, setActiveSection] = useState<ProfileSection>('basics')
+  const [errors, setErrors] = useState<FieldErrors>({})
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
-  const completeness = calculateCompleteness(formData)
   const currentIndex = SECTION_ORDER.indexOf(activeSection)
-  const isLast = currentIndex === SECTION_ORDER.length - 1
+  const isFirst = currentIndex === 0
+  const isReview = activeSection === 'review'
+  const activeMeta = PROFILE_SECTIONS.find((section) => section.id === activeSection)!
+
+  const completedStepCount = useMemo(() => {
+    return SECTION_ORDER.filter((section) => {
+      if (section === 'review') return false
+      return Object.keys(validateSections(formData, [section])).length === 0
+    }).length
+  }, [formData])
 
   function patch(update: Partial<OrgProfileFormData>) {
-    setFormData((prev) => ({ ...prev, ...update }))
-    setSaved(false)
+    setFormData((previous) => ({ ...previous, ...update }))
+    setErrors((previous) => {
+      const next = { ...previous }
+      Object.keys(update).forEach((field) => delete next[field as keyof OrgProfileFormData])
+      return next
+    })
+    setSaveError('')
+  }
+
+  function goBack() {
+    if (!isFirst) setActiveSection(SECTION_ORDER[currentIndex - 1])
+  }
+
+  function goNext() {
+    const sectionErrors = validateSections(formData, [activeSection])
+    setErrors(sectionErrors)
+    if (Object.keys(sectionErrors).length > 0) return
+    setActiveSection(SECTION_ORDER[currentIndex + 1])
   }
 
   async function handleSave() {
+    const allErrors = validateSections(formData, ['basics', 'community', 'funding'])
+    setErrors(allErrors)
+    if (Object.keys(allErrors).length > 0) {
+      const firstSectionWithError = SECTION_ORDER.find((section) =>
+        REQUIRED_BY_SECTION[section].some((field) => allErrors[field])
+      )
+      if (firstSectionWithError) setActiveSection(firstSectionWithError)
+      return
+    }
+
     setSaving(true)
+    setSaveError('')
     try {
       await (onSave?.(formData) ?? Promise.resolve())
-      setSaved(true)
+    } catch {
+      setSaveError('We could not save the profile. Please try again.')
     } finally {
       setSaving(false)
     }
   }
 
-  function goNext() {
-    if (!isLast) setActiveSection(SECTION_ORDER[currentIndex + 1])
-  }
-
   const sectionContent: Record<ProfileSection, React.ReactNode> = {
-    identity: <IdentitySection data={formData} onChange={patch} />,
-    location: <LocationSection data={formData} onChange={patch} />,
-    contact: <ContactSection data={formData} onChange={patch} />,
-    capacity: <CapacitySection data={formData} onChange={patch} />,
-    activities: <ActivitiesSection data={formData} onChange={patch} />,
-    'grant-experience': <GrantExperienceSection data={formData} onChange={patch} />,
+    basics: <BasicsStep data={formData} errors={errors} onChange={patch} />,
+    community: <CommunityStep data={formData} errors={errors} onChange={patch} />,
+    funding: <FundingStep data={formData} errors={errors} onChange={patch} />,
+    review: <ReviewStep data={formData} />,
   }
-
-  const activeMeta = PROFILE_SECTIONS.find((s) => s.id === activeSection)!
 
   return (
-    <div className="flex min-h-screen bg-stone-50">
-      {/* Sidebar */}
-      <aside className="hidden w-72 shrink-0 border-r border-stone-200 bg-white lg:flex lg:flex-col">
-        <div className="flex flex-col items-center gap-3 border-b border-stone-100 px-6 py-8">
-          <CompletenessRing pct={completeness} />
-          <div className="text-center">
-            <p className="text-sm font-semibold text-stone-800">Profile completeness</p>
-            <p className="text-xs text-stone-500">Complete all sections to unlock grant matching</p>
-          </div>
+    <main className="min-h-screen bg-stone-50 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-6">
+          <p className="text-sm font-semibold text-emerald-700">GrantCraft beta</p>
+          <h1 className="mt-2 text-2xl font-semibold text-stone-950">Organisation profile</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600">
+            Add the essentials GrantCraft needs to recommend relevant grants and support future application drafts.
+          </p>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-4">
-          <ul className="space-y-1">
-            {PROFILE_SECTIONS.map((section) => {
-              const Icon = SECTION_ICONS[section.id]
-              const isActive = section.id === activeSection
-              return (
-                <li key={section.id}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveSection(section.id)}
-                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${
-                      isActive
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'text-stone-600 hover:bg-stone-50 hover:text-stone-800'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">{section.label}</p>
-                      <p className="truncate text-xs text-stone-400">{section.description}</p>
-                    </div>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </nav>
-      </aside>
+        <StepHeader activeSection={activeSection} />
 
-      {/* Main content */}
-      <main className="flex flex-1 flex-col">
-        {/* Section header */}
-        <header className="border-b border-stone-200 bg-white px-6 py-5 sm:px-8">
-          <div className="flex items-center gap-3">
-            {(() => {
-              const Icon = SECTION_ICONS[activeSection]
-              return <Icon className="h-5 w-5 text-emerald-600" />
-            })()}
-            <div>
-              <h1 className="text-lg font-semibold text-stone-900">{activeMeta.label}</h1>
-              <p className="text-sm text-stone-500">{activeMeta.description}</p>
+        <section className="mt-6 rounded-lg border border-stone-200 bg-white">
+          <div className="border-b border-stone-100 px-5 py-5 sm:px-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-stone-950">{activeMeta.label}</h2>
+                <p className="mt-1 text-sm text-stone-500">{activeMeta.description}</p>
+              </div>
+              <p className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600">
+                {completedStepCount} of 3 sections ready
+              </p>
             </div>
           </div>
 
-          {/* Mobile section nav */}
-          <div className="mt-4 flex gap-1 overflow-x-auto lg:hidden">
-            {PROFILE_SECTIONS.map((s, i) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setActiveSection(s.id)}
-                className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  s.id === activeSection
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
-                }`}
-              >
-                {i + 1}. {s.label}
-              </button>
-            ))}
-          </div>
-        </header>
-
-        {/* Form body */}
-        <div className="flex-1 overflow-y-auto px-6 py-8 sm:px-8">
-          <div className="mx-auto max-w-2xl">
+          <div className="px-5 py-6 sm:px-6">
             {sectionContent[activeSection]}
+            {saveError && (
+              <p className="mt-5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {saveError}
+              </p>
+            )}
           </div>
-        </div>
 
-        {/* Footer actions */}
-        <footer className="border-t border-stone-200 bg-white px-6 py-4 sm:px-8">
-          <div className="mx-auto flex max-w-2xl items-center justify-between">
+          <div className="flex flex-col-reverse gap-3 border-t border-stone-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <button
               type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 disabled:opacity-50"
+              onClick={goBack}
+              disabled={isFirst || saving}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {saved ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  Saved
-                </>
-              ) : saving ? (
-                'Saving…'
-              ) : (
-                'Save progress'
-              )}
+              <ChevronLeft className="h-4 w-4" />
+              Back
             </button>
 
-            {!isLast && (
-              <button
-                type="button"
-                onClick={goNext}
-                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-              >
-                Next: {PROFILE_SECTIONS[currentIndex + 1].label}
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            )}
-
-            {isLast && (
+            {isReview ? (
               <button
                 type="button"
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Save profile
+                {saving ? 'Saving profile...' : 'Save profile'}
+                {!saving && <CheckCircle2 className="h-4 w-4" />}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={saving}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Continue
+                <ChevronRight className="h-4 w-4" />
               </button>
             )}
           </div>
-        </footer>
-      </main>
-    </div>
+        </section>
+      </div>
+    </main>
   )
 }

@@ -10,6 +10,7 @@ import type {
   ProfileSection,
   OrgProfileFormData,
   ProfileSectionMeta,
+  FundingCategory,
 } from '@/types/org'
 
 export const ORG_TYPES: Record<OrgType, string> = {
@@ -134,42 +135,41 @@ export const GRANT_WRITING_CAPACITY: Record<GrantWritingCapacity, string> = {
   experienced: 'Experienced',
 }
 
+export const FUNDING_CATEGORIES: Record<FundingCategory, string> = {
+  project: 'A specific project or programme',
+  'core-running-costs': 'Running costs',
+  equipment: 'Equipment or materials',
+  'capital-works': 'Building or renovation work',
+  training: 'Training or skills development',
+  events: 'Events or community activities',
+  'research-planning': 'Research, planning, or feasibility work',
+  'not-sure': 'Not sure yet',
+}
+
 export const PROFILE_SECTIONS: ProfileSectionMeta[] = [
   {
-    id: 'identity' as ProfileSection,
-    label: 'Identity',
-    description: 'Name, legal status, and purpose',
+    id: 'basics',
+    label: 'Basics',
+    description: 'Name, location, and organisation type',
     icon: 'Building2',
   },
   {
-    id: 'location' as ProfileSection,
-    label: 'Location',
-    description: 'Address, county, and setting',
-    icon: 'MapPin',
-  },
-  {
-    id: 'contact' as ProfileSection,
-    label: 'Contact',
-    description: 'Primary contact and website',
-    icon: 'Mail',
-  },
-  {
-    id: 'capacity' as ProfileSection,
-    label: 'Capacity',
-    description: 'Staff, volunteers, and turnover',
-    icon: 'Users',
-  },
-  {
-    id: 'activities' as ProfileSection,
-    label: 'Activities',
-    description: 'Work areas and beneficiaries',
+    id: 'community',
+    label: 'Community',
+    description: 'Your work and who benefits',
     icon: 'Target',
   },
   {
-    id: 'grant-experience' as ProfileSection,
-    label: 'Grant Experience',
-    description: 'Funding history and capacity',
+    id: 'funding',
+    label: 'Funding need',
+    description: 'What you want funding for',
     icon: 'FileText',
+  },
+  {
+    id: 'review',
+    label: 'Review',
+    description: 'Check before saving',
+    icon: 'CheckCircle2',
   },
 ]
 
@@ -204,13 +204,15 @@ export const DEFAULT_FORM_DATA: OrgProfileFormData = {
   previousGrantsDetail: '',
   largestGrantReceived: '',
   grantWritingCapacity: 'none',
+  projectFundingNeed: '',
+  estimatedFundingAmount: '',
+  fundingCategory: 'not-sure',
+  biggestGrantChallenge: '',
 }
 
 export const SECTION_ORDER: ProfileSection[] = [
-  'identity',
-  'location',
-  'contact',
-  'capacity',
-  'activities',
-  'grant-experience',
+  'basics',
+  'community',
+  'funding',
+  'review',
 ]
