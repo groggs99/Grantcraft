@@ -7,9 +7,9 @@ GrantCraft helps Irish community and voluntary organisations find relevant grant
 | Stage | Name | What it does |
 |-------|------|--------------|
 | 1 | Organisation Profile | Build a rich profile used across all other stages |
-| 2 | Grant Matching | Surface relevant grants from the 96-grant Irish database |
-| 3 | Application Builder | Draft and export grant applications section by section |
-| 4 | Impact Reporting | Track outcomes and generate funder-ready impact reports |
+| 2 | Idea Development | Turn a plain-language project idea into a structured grant brief |
+| 3 | Grant Matching | Surface relevant grants from the 96-grant Irish database |
+| 4 | Application Generation | Draft and export grant applications section by section |
 
 Stage 1 is the foundation — every downstream feature depends on profile completeness.
 
