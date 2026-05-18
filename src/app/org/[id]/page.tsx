@@ -23,6 +23,7 @@ export default async function OrgProfilePage({
     .from('organisations')
     .select('*')
     .eq('id', id)
+    .eq('user_id', user.id)
     .single()
 
   if (!org) notFound()
@@ -58,6 +59,10 @@ export default async function OrgProfilePage({
     previousGrantsDetail: org.previous_grants_detail ?? undefined,
     largestGrantReceived: org.largest_grant_received ?? undefined,
     grantWritingCapacity: org.grant_writing_capacity,
+    projectFundingNeed: org.project_funding_need ?? '',
+    estimatedFundingAmount: org.estimated_funding_amount ?? '',
+    fundingCategory: org.funding_category ?? 'not-sure',
+    biggestGrantChallenge: org.biggest_grant_challenge ?? '',
   }
 
   async function updateOrgProfile(data: OrgProfileFormData) {
@@ -66,30 +71,31 @@ export default async function OrgProfilePage({
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) throw new Error('You must be signed in.')
+    validateBetaProfile(data)
 
     const { error } = await supabase
       .from('organisations')
       .update({
-        name: data.name,
+        name: data.name.trim(),
         legal_name: data.legalName,
         org_type: data.orgType,
         charity_number: data.charityNumber,
         company_number: data.companyNumber,
         tax_exemption_ref: data.taxExemptionRef,
         year_founded: data.yearFounded,
-        description: data.description,
-        mission: data.mission,
+        description: data.description.trim(),
+        mission: data.mission.trim() || data.description.trim(),
         website: data.website,
-        address_line1: data.addressLine1,
+        address_line1: data.addressLine1.trim() || data.town.trim(),
         address_line2: data.addressLine2,
-        town: data.town,
+        town: data.town.trim(),
         county: data.county,
         eircode: data.eircode,
         setting: data.setting,
         geographic_reach: data.geographicReach,
-        contact_name: data.contactName,
-        contact_role: data.contactRole,
-        contact_email: data.contactEmail,
+        contact_name: data.contactName || 'Profile owner',
+        contact_role: data.contactRole || 'Profile owner',
+        contact_email: data.contactEmail || user.email || '',
         contact_phone: data.contactPhone,
         staff_count: data.staffCount,
         volunteer_count: data.volunteerCount,
@@ -100,6 +106,10 @@ export default async function OrgProfilePage({
         previous_grants_detail: data.previousGrantsDetail,
         largest_grant_received: data.largestGrantReceived,
         grant_writing_capacity: data.grantWritingCapacity,
+        project_funding_need: data.projectFundingNeed.trim(),
+        estimated_funding_amount: data.estimatedFundingAmount.trim(),
+        funding_category: data.fundingCategory,
+        biggest_grant_challenge: data.biggestGrantChallenge.trim(),
       })
       .eq('id', id)
       .eq('user_id', user.id)
@@ -108,4 +118,28 @@ export default async function OrgProfilePage({
   }
 
   return <OrgProfileForm initialData={initialData} onSave={updateOrgProfile} />
+}
+
+function validateBetaProfile(data: OrgProfileFormData) {
+  const requiredText = [
+    data.name,
+    data.town,
+    data.description,
+    data.projectFundingNeed,
+    data.estimatedFundingAmount,
+    data.biggestGrantChallenge,
+  ]
+
+  if (requiredText.some((value) => value.trim().length === 0)) {
+    throw new Error('Please complete the required organisation profile fields.')
+  }
+
+  if (data.activityAreas.length === 0 || data.targetDemographics.length === 0) {
+    throw new Error('Please choose an activity area and at least one audience served.')
+  }
+
+  const amount = Number(data.estimatedFundingAmount.replace(/[^\d.]/g, ''))
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error('Please enter a valid estimated funding amount.')
+  }
 }

@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GrantCraft
 
-## Getting Started
+GrantCraft helps Irish community and voluntary organisations find relevant grants and write stronger funding applications. The product is built for the volunteer secretary, the part-time community development worker, the GAA club treasurer — people who are short on time, unfamiliar with grant-writing conventions, and currently lose hours navigating funder portals. The interface aims to feel calm, trustworthy, and written in plain English.
 
-First, run the development server:
+## The four-stage journey
+
+| Stage | Name | What it does |
+|-------|------|--------------|
+| 1 | Organisation Profile | Build a rich profile used as context for every later stage |
+| 2 | Idea Development | Shape a funding need into a structured project brief |
+| 3 | Grant Matching | Surface relevant grants from a curated Irish funding database |
+| 4 | Application Generation | Draft a tailored application section by section |
+
+Stage 1 is the foundation — every downstream feature depends on profile completeness.
+
+## Stack
+
+- Next.js 16 (App Router, Server Components by default)
+- Tailwind CSS v4
+- Supabase (Postgres + Auth + Row-Level Security) via `@supabase/ssr`
+- TypeScript, strict mode, no `any`
+- Deployed on Vercel
+
+## Getting started
+
+Prerequisites: Node.js (version pinned in `package.json`) and a Supabase project with the migrations below applied.
 
 ```bash
+npm install
+cp .env.local.example .env.local   # add your Supabase URL and anon key
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Database migrations
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Apply in order against your Supabase project:
 
-## Learn More
+```
+supabase/migrations/001_create_organisations.sql
+supabase/migrations/002_create_project_ideas.sql
+supabase/migrations/003_add_beta_profile_fields.sql
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Reference data
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| File | Purpose |
+|------|---------|
+| `ireland_grants_database_v3.xlsx` | 96-grant Irish funding database used by Stage 3 matching |
+| `grantcraft_tam_analysis.xlsx` | Total addressable market and SAM analysis |
+| `grantcraft-platform-brief.md` | Product brief and platform overview |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Working in this repo
 
-## Deploy on Vercel
+GrantCraft is built collaboratively with three AI tools playing distinct, non-overlapping roles:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Claude (in chat)** — architect. Holds the roadmap and writes a spec for every chunk before any code is written. Specs live in `docs/specs/`.
+- **Claude Code** — primary builder. Implements one chunk per branch, working from the spec.
+- **Codex** — reviewer. Reviews each PR against the spec and the conventions in `AGENTS.md`. Never the primary author for the same surface Claude Code wrote, and vice versa.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Each unit of work is a single chunk on a single branch with a single focused PR. Session progress is logged in `BUILD_LOG.md`; the chunk backlog lives in `ROADMAP.md`. Read `AGENTS.md` and `CLAUDE.md` before starting any work — they document stack conventions, the calm-UI requirement, and Irish-specific rules that the agents must follow.
+
+## Conventions
+
+- All UI copy uses Irish English (organisation, programme, centre, recognise).
+- County data refers to the 26 counties of the Republic of Ireland.
+- Monetary amounts use the euro (€) symbol and Irish formatting (e.g. €5,000).
+- Charity registration refers to the Charities Regulator; company numbers to the CRO.
+- Org types align to common Irish legal structures: CLG, CIC, unincorporated voluntary, registered charity.
+
+## Status
+
+Pre-beta. The beta onboarding flow is in active development for co-designer testing with Irish community organisations. The full Stage 1 form, Supabase auth, and Stages 2–4 are upcoming.

@@ -79,13 +79,21 @@ export type County =
 
 export type GrantWritingCapacity = 'none' | 'some' | 'experienced'
 
+export type FundingCategory =
+  | 'project'
+  | 'core-running-costs'
+  | 'equipment'
+  | 'capital-works'
+  | 'training'
+  | 'events'
+  | 'research-planning'
+  | 'not-sure'
+
 export type ProfileSection =
-  | 'identity'
-  | 'location'
-  | 'contact'
-  | 'capacity'
-  | 'activities'
-  | 'grant-experience'
+  | 'basics'
+  | 'community'
+  | 'funding'
+  | 'review'
 
 export interface Organisation {
   id: string
@@ -119,6 +127,10 @@ export interface Organisation {
   previousGrantsDetail?: string
   largestGrantReceived?: string
   grantWritingCapacity: GrantWritingCapacity
+  projectFundingNeed: string
+  estimatedFundingAmount: string
+  fundingCategory: FundingCategory
+  biggestGrantChallenge: string
   createdAt: string
   updatedAt: string
 }

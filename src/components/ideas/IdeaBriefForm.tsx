@@ -131,7 +131,7 @@ export default function IdeaBriefForm({ orgId, orgName, onSave }: Props) {
             Project Idea Development
           </h1>
           <p className="mt-0.5 text-sm text-stone-500">
-            Describe your idea in plain language and we'll generate a structured grant brief using your organisation's profile.
+            Describe your idea in plain language and we&apos;ll generate a structured grant brief using your organisation&apos;s profile.
           </p>
         </div>
       </div>
