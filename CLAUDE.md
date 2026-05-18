@@ -42,21 +42,50 @@ The 96-grant database (v3) is the canonical list of Irish grant programmes used 
 - Charity registration is with the Charities Regulator (not HMRC/Companies House UK)
 - Company numbers reference the Companies Registration Office (CRO)
 
-## File Layout (src/)
+## File Layout
 
 ```
 src/
   app/
-    globals.css          # Tailwind import + global custom classes
+    globals.css                          # Tailwind import + global custom classes
     layout.tsx
-    page.tsx
+    page.tsx                             # Landing page
+    favicon.ico
+    api/
+      ai/
+        generate-brief/route.ts          # Stage 2 — AI brief generation endpoint
+    auth/
+      actions.ts                         # Auth server actions
+      callback/route.ts                  # Supabase auth callback handler
+      page.tsx                           # Sign-in / sign-up page
     org/
-      new/page.tsx       # Stage 1 — create org profile
+      new/page.tsx                       # Stage 1 — create org profile
+      [id]/
+        page.tsx                         # Stage 1 — view / edit org profile
+        ideas/
+          new/page.tsx                   # Stage 2 — create project idea brief
   components/
     org/
-      OrgProfileForm.tsx # Multi-section profile form (client component)
+      OrgProfileForm.tsx                 # Multi-step profile form (client component)
+    ideas/
+      IdeaBriefForm.tsx                  # Project idea brief form (client component)
   lib/
-    constants.ts         # Irish-specific constants (counties, activity areas, etc.)
+    constants.ts                         # Irish-specific constants (counties, activity areas, etc.)
+    supabase/
+      client.ts                          # Supabase browser client
+      server.ts                          # Supabase server client
   types/
-    org.ts               # Organisation TypeScript types
+    org.ts                               # Organisation TypeScript types
+    ideas.ts                             # Project idea TypeScript types
+  proxy.ts                               # Next.js proxy / middleware
+
+supabase/
+  migrations/
+    001_create_organisations.sql
+    002_create_project_ideas.sql
+    003_add_beta_profile_fields.sql
+
+docs/
+  BETA_PRD.md                            # Beta product requirements
+  GRANTCRAFT_BUILD_WORKFLOW.md           # AI build workflow documentation
 ```
