@@ -9,9 +9,9 @@ GrantCraft is a four-stage web application that helps Irish non-profit organisat
 | Stage | Name | Purpose |
 |-------|------|---------|
 | 1 | Organisation Profile | Build and maintain a rich org profile used across all other stages |
-| 2 | Grant Matching | Surface relevant grants from the 96-grant database (v3) based on org profile |
-| 3 | Application Builder | Draft, refine, and export grant applications section by section |
-| 4 | Impact Reporting | Track outcomes, log evidence, and generate funder-ready impact reports |
+| 2 | Idea Development | Shape a funding need into a structured project brief |
+| 3 | Grant Matching | Surface relevant grants from the 96-grant database (v3) based on org profile and project brief |
+| 4 | Application Generation | Draft a tailored grant application section by section, ready to export |
 
 Stage 1 is the foundation — every downstream feature depends on profile completeness.
 
@@ -32,7 +32,7 @@ Stage 1 is the foundation — every downstream feature depends on profile comple
 
 ## Grant Database
 
-The 96-grant database (v3) is the canonical list of Irish grant programmes used for matching in Stage 2. Each grant record includes: funder, programme name, eligible org types, county/national reach, activity areas, typical award size, and deadline cadence.
+The 96-grant database (v3) is the canonical list of Irish grant programmes used for matching in Stage 3. Each grant record includes: funder, programme name, eligible org types, county/national reach, activity areas, typical award size, and deadline cadence.
 
 ## Key Conventions
 
