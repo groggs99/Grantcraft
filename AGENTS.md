@@ -12,6 +12,16 @@ GrantCraft helps Irish community and voluntary organisations find relevant grant
 
 The product should feel calm, trustworthy, and practical. Prioritise plain English, visible progress, forgiving forms, and screens that help users complete a real task without needing technical knowledge.
 
+## Multi-Agent Workflow
+
+This repo is built collaboratively by three AI tools with non-overlapping roles:
+
+- **Claude (in chat)** is the architect. It writes a short spec for each chunk before any code is written. Specs live in `docs/specs/`.
+- **Claude Code** is the primary builder. It implements one chunk per branch from the corresponding spec.
+- **Codex** is the reviewer. It reviews PRs against the spec and the rules in this file. It is never the primary author for the same surface Claude Code wrote, and vice versa.
+
+Each unit of work is a single chunk on a single branch with a single focused PR (target: under 200 changed lines, one concern). Session progress is appended to `BUILD_LOG.md`; the chunk backlog lives in `ROADMAP.md`.
+
 ## How To Work In This Repo
 
 - Read `docs/BETA_PRD.md` and `docs/GRANTCRAFT_BUILD_WORKFLOW.md` before starting product work.
